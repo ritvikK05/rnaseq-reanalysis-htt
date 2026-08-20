@@ -18,12 +18,18 @@ Append as you go; this becomes the README on Days 4–5.
 | Organism | *Homo sapiens* |
 | System | iPSC-derived neural stem cells (NSCs), isogenic lines |
 | Platform | Illumina NovaSeq 6000, paired-end 2×100, ~50M reads/sample |
+| Library prep | KAPA RNA HyperPrep + RiboErase (HMR) — total RNA, rRNA-depleted, **not** poly-A selected |
 
 **Comparison chosen:** KO-NSC vs IC1-NSC (HTT knockout vs isogenic control)
 
 Rationale: larger effect size than the HD comparison (1,401 vs 822 DEGs as
 reported; 1,464 vs 835 as recomputed — see §4), and it is the paper's cleanest
 loss-of-function contrast.
+
+Note on library prep: RiboErase total-RNA libraries capture non-coding
+transcripts that poly-A selection would miss. This explains why their results
+table contains a large ncRNA fraction, and is relevant to gene-universe
+comparisons.
 
 ---
 
@@ -53,6 +59,7 @@ loss-of-function contrast.
 NCBI-generated raw count matrix from GEO ("Download RNA-seq counts").
 
 - Identifiers: **Entrez Gene IDs**
+- Annotation basis: **NCBI RefSeq, GRCh38.p13**
 - Verified integer: `all(counts == round(counts))` → TRUE
 - 10 sample columns (GSM8343537 missing)
 
@@ -62,6 +69,7 @@ NCBI-generated raw count matrix from GEO ("Download RNA-seq counts").
 - 39,376 rows
 - Columns: `GeneID` (Entrez), `Symbol`, `Description`, `Synonyms`, `GeneType`,
   `EnsemblGeneID`, `Status`, coordinates, GO term columns
+- Version-matched to the counts file (both GRCh38.p13)
 - `EnsemblGeneID` empty for 12,299 genes (31.2%) — composition in §9
 - Note: blanks import as `""`, not `NA`. Normalize on load:
   `annot$EnsemblGeneID[annot$EnsemblGeneID == ""] <- NA`
@@ -74,7 +82,7 @@ Supplementary Table 3 (`13578_2025_1443_MOESM5_ESM.xlsx`)
   (extra title row — the offset differs between sheets!)
 - Columns: `gene_ID`, `Gene_name`, `log2FoldChange`, `Fold_change`, `P-value`,
   `P_adjusted`, `Description`
-- Identifiers: **Ensembl, no version suffix**
+- Identifiers: **Ensembl (v102), no version suffix**
 - Full results, not just significant genes
 
 ### Not used
@@ -84,26 +92,37 @@ individual genes.
 
 ### Provenance
 - Counts file: `GSE270472_raw_counts_GRCh38.p13_NCBI.tsv.gz`
-  ⚠️ confirm exact patch version from the filename on disk
 - Annotation file: `Human_GRCh38_p13_annot.tsv.gz`
 - Both downloaded 2026-08-20 from GEO GSE270472 → "Download RNA-seq counts"
-- Supplementary Table 3 downloaded 2026-08-20 from
+- Supplementary Table 3 (MOESM5) and Supplementary Methods (MOESM13)
+  downloaded 2026-08-20 from
   https://link.springer.com/article/10.1186/s13578-025-01443-5
 
 ---
 
 ## 4. Original authors' parameters
 
-### As stated in the paper
+### Pipeline (confirmed, Supplementary Methods / MOESM13)
+
+| Step | Tool |
+|---|---|
+| QC | FastQC v0.11.9 |
+| Trim / filter | BBDuk 2 v37.02 |
+| rRNA removal | bowtie2 v2.3.5.1 (`-X 1000`, `--un-conc`); rRNA-aligned reads discarded |
+| Quantification | **RSEM v1.3.1** (bowtie2 backend, default settings) |
+| Reference | **Ensembl v102**, GRCh38 |
+| Differential expression | **DESeq2 v1.30.0** |
+| GO (main text) | PANTHER v17, Fisher's exact + FDR, p < 0.05 |
+| GO (supplementary time-course) | clusterProfiler v4.10.0 `enrichGO`, BH correction |
+
+Bioinformatics performed by IDEAS4BIOLOGY (external vendor).
+
+### Thresholds and reported results
 - **Thresholds:** |log2FC| > 1.5 AND padj < 0.05
   (note: 1.5, *not* 1 — stricter than the common default)
 - **Reported DEGs:** 1,401 (KO vs IC1), 822 (HD vs IC1); 331 overlap
   - KO: 1,231 up / 170 down
   - HD: 387 up / 435 down
-- **GO enrichment:** PANTHER v17, Fisher's exact test, FDR correction p < 0.05
-- **Bioinformatics vendor:** IDEAS4BIOLOGY (external company)
-- **Pipeline details:** ⚠️ TO CHECK — Supplementary Methods, not main text.
-  Need: aligner, quantifier, annotation release, DE package.
 
 ### Validation of published thresholds
 Applying the stated cutoffs (|log2FC| > 1.5, padj < 0.05) to Supplementary
@@ -119,13 +138,16 @@ rather than incidental cause.
 **Decision:** the 1,464-gene list derived directly from the published table is
 used as the reference set for this reanalysis.
 
-### Inferred DE framework
+### DE framework — inference and correction
 Supplementary Table 3 reports adjusted p-values for all 31,264 genes with
-**zero NAs**. DESeq2's default independent filtering and Cook's distance
-outlier detection both produce NAs, so the original analysis likely used
-edgeR, limma-voom, or DESeq2 with both filters disabled. This is a structural
-difference from the reanalysis and is expected to account for part of the
-non-concordance. ⚠️ Confirm against Supplementary Methods.
+**zero NAs**, which is inconsistent with DESeq2 defaults. My initial inference
+was that a different package (edgeR or limma-voom) had been used.
+
+**The Supplementary Methods refute this: they used DESeq2 v1.30.0.** The
+absence of NAs therefore indicates the analysis was run with
+`independentFiltering = FALSE` and `cooksCutoff = FALSE`, not a different
+package. Still a real methodological difference from the defaults used here,
+but a parameter choice rather than a framework change.
 
 ---
 
@@ -137,14 +159,17 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
    n=2 controls vs the authors' n=3. Reduces power; expect to miss borderline
    genes.
 
-2. **Different quantification pipeline.** NCBI's standardized counts vs the
-   vendor's pipeline. Different aligner, annotation release, and counting rules.
+2. **Different annotation source.** Theirs: Ensembl v102. Mine: NCBI RefSeq
+   GRCh38.p13. These are different annotation *sources*, not merely different
+   releases — different gene models, different gene boundaries, different gene
+   universes. Likely a major contributor, and the root cause of the Entrez ↔
+   Ensembl mapping problem in #4.
 
-3. **Shrinkage.** Using `lfcShrink(type="apeglm")`; their table contains
-   unshrunken estimates. Evidence: top KO hit FKBPL has log2FC ≈ 22
-   (fold change ~4.1 million) — a near-zero-denominator artifact that apeglm
-   will pull hard toward zero. **Expect substantially different top-ranked
-   genes even where significance calls agree.**
+3. **Different quantifier.** RSEM v1.3.1 (bowtie2 backend, EM-based
+   transcript-level estimation, probabilistic assignment of multi-mapping
+   reads) vs NCBI's count-based pipeline, which typically discards
+   multi-mappers. Expect systematic differences for paralogues and repeat-rich
+   loci.
 
 4. **ID mapping loss.** Counts use Entrez, truth table uses Ensembl.
    `AnnotationDbi::select()` returns 1:many mappings; record the final mapping
@@ -152,22 +177,40 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
    and pseudogene classes — only 178 protein-coding genes lack an Ensembl ID,
    so impact on a protein-coding-dominated DEG list should be minimal.
 
-5. **Control line caveat (authors' own).** IC1 was originally intended as the
+5. **rRNA depletion step.** They removed rRNA-aligned reads with bowtie2 before
+   quantification. NCBI's pipeline does not include this step, so library
+   composition and therefore size factors differ.
+
+6. **Independent filtering disabled.** Same package (DESeq2), but they ran with
+   `independentFiltering = FALSE` and `cooksCutoff = FALSE`. Genes assigned NA
+   in this reanalysis were still tested in theirs — **unrecoverable by
+   construction**. Quantify in §9.
+
+7. **Shrinkage.** Using `lfcShrink(type="apeglm")`; their table contains
+   unshrunken estimates. Evidence: top KO hit FKBPL has log2FC ≈ 22
+   (fold change ~4.1 million) — a near-zero-denominator artifact that apeglm
+   will pull hard toward zero. **Expect substantially different top-ranked
+   genes even where significance calls agree.**
+
+8. **DESeq2 version drift.** Theirs v1.30.0 (2020); mine current (Bioconductor
+   3.23). Defaults and shrinkage behavior have changed across releases.
+
+9. **Control line caveat (authors' own).** IC1 was originally intended as the
    isogenic control, but the corrected allele turned out to be silenced,
    producing monoallelic *HTT* expression. The authors switched to IC2 for
    later experiments — but the RNA-seq comparison still uses IC1. So the
    "control" is not a clean wild-type.
 
-6. **Passage as unmodeled covariate.** Passages are matched across lines
-   (IC1: 4–6; KO: 4–7), so passage functions like a batch variable.
-   Baseline model is `~ condition`; test `~ passage + condition` as an extension.
+10. **Passage as unmodeled covariate.** Passages are matched across lines
+    (IC1: 4–6; KO: 4–7), so passage functions like a batch variable.
+    Baseline model is `~ condition`; test `~ passage + condition` as an
+    extension.
 
-7. **Enrichment tool.** clusterProfiler vs their PANTHER v17. Different gene
-   universes and algorithms — GO results will differ for tool reasons alone.
-
-8. **Different DE framework.** Their table has zero NAs across all 31,264
-   genes, inconsistent with DESeq2 defaults. See §4. Genes DESeq2 assigns NA
-   are unrecoverable by construction — quantify this in §9.
+11. **Enrichment tool.** clusterProfiler v4.20.0 vs their PANTHER v17 (main
+    text). Different gene universes and algorithms — GO results will differ for
+    tool reasons alone. Note they used clusterProfiler v4.10.0 for the
+    supplementary time-course analysis, so a closer comparison is possible
+    there.
 
 ---
 
@@ -181,6 +224,10 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
 - **Thresholds:** match the paper (|log2FC| > 1.5, padj < 0.05)
 - **Namespacing:** `AnnotationDbi::select()`, `dplyr::filter()` — several
   packages mask these
+- **Filtering:** keeping DESeq2 defaults (independent filtering ON) rather than
+  matching their disabled setting. Rationale: defaults are the better practice,
+  and the difference becomes a measurable discrepancy source (§5.6) rather than
+  a hidden one. Optionally rerun with filtering off as a sensitivity check.
 
 ---
 
@@ -226,7 +273,9 @@ pydeseq2. No exceptions.
       (paper reports 822)
 - [x] Annotation coverage: 39,376 genes, 12,299 (31.2%) lacking an Ensembl ID
       — 9,206 ncRNA, 1,610 blank type, 666 pseudogene, 437 tRNA, 130 snoRNA,
-      20 other, 19 rRNA, 28 snRNA, 5 unknown, and only **178 protein-coding**
+      28 snRNA, 20 other, 19 rRNA, 5 unknown, and only **178 protein-coding**
+- [x] Original pipeline identified: RSEM v1.3.1 / Ensembl v102 / DESeq2 v1.30.0
+      (see §4)
 
 ### Mapping
 - [ ] Coverage of count-matrix genes via GEO annotation: _____%
@@ -247,12 +296,15 @@ pydeseq2. No exceptions.
 - [ ] Of shared DEGs, fraction with matching log2FC sign: _____%
       (should be ~100%; below ~95% suggests a labeling or reference-level problem)
 - [ ] Of missed genes, fraction assigned NA by DESeq2 filtering: _____
+      (see §5.6 — unrecoverable by construction)
 - [ ] Of missed genes, fraction with padj between 0.05 and 0.15: _____
       (threshold sensitivity vs genuine disagreement)
 - [ ] Spearman correlation of log2FC across all shared genes: _____
 
 ### Extensions
 - [ ] Did `~ passage + condition` change the result? _____
+- [ ] Sensitivity check: rerun with `independentFiltering = FALSE` to match
+      their setting — how much does recovery improve? _____
 
 ---
 
