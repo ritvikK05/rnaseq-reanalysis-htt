@@ -1,0 +1,50 @@
+# ---- R ----
+.Rhistory
+.Rapp.history
+.RData
+.Rproj.user/
+.Ruserdata
+*.Rproj
+.Renviron
+
+# renv: commit renv.lock, ignore the library itself
+renv/library/
+renv/local/
+renv/staging/
+renv/python/
+renv/sandbox/
+
+# ---- Python (for the pydeseq2 fallback) ----
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# ---- Data ----
+# Raw downloads are reproducible via scripts/download_data.sh — don't commit them.
+# Delete a line below if you decide a file is small enough and worth versioning.
+data/raw/
+*.fastq
+*.fastq.gz
+*.bam
+*.sam
+*.bai
+*.tsv.gz
+
+# Large supplementary files (downloadable from the paper)
+*_MOESM*.xlsx
+GSE*_*.xlsx
+
+# ---- Outputs ----
+# Keep final figures/tables you reference in the README; ignore scratch.
+results/scratch/
+*.log
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
