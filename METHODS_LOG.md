@@ -64,7 +64,7 @@ NCBI-generated raw count matrix from GEO ("Download RNA-seq counts").
 - 10 sample columns (GSM8343537 missing)
 
 ### Annotation
-`Human_GRCh38_p13_annot.tsv.gz` (GEO, GRCh38.p13)
+`Human.GRCh38.p13.annot.tsv.gz` (GEO, GRCh38.p13)
 
 - 39,376 rows
 - Columns: `GeneID` (Entrez), `Symbol`, `Description`, `Synonyms`, `GeneType`,
@@ -73,6 +73,8 @@ NCBI-generated raw count matrix from GEO ("Download RNA-seq counts").
 - `EnsemblGeneID` empty for 12,299 genes (31.2%) — composition in §9
 - Note: blanks import as `""`, not `NA`. Normalize on load:
   `annot$EnsemblGeneID[annot$EnsemblGeneID == ""] <- NA`
+- Note: NCBI names this file with periods, not underscores. Do not rename it —
+  the original filename is provenance.
 
 ### Truth table
 Supplementary Table 3 (`13578_2025_1443_MOESM5_ESM.xlsx`)
@@ -92,7 +94,7 @@ individual genes.
 
 ### Provenance
 - Counts file: `GSE270472_raw_counts_GRCh38.p13_NCBI.tsv.gz`
-- Annotation file: `Human_GRCh38_p13_annot.tsv.gz`
+- Annotation file: `Human.GRCh38.p13.annot.tsv.gz`
 - Both downloaded 2026-08-20 from GEO GSE270472 → "Download RNA-seq counts"
 - Supplementary Table 3 (MOESM5) and Supplementary Methods (MOESM13)
   downloaded 2026-08-20 from
@@ -201,6 +203,10 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
    later experiments — but the RNA-seq comparison still uses IC1. So the
    "control" is not a clean wild-type.
 
+   This is also what produces the *positive* HTT log2FC (+1.34) in Table S3 —
+   see §7. A monoallelic control against a frameshift-edited KO that still
+   transcribes gives more HTT message in the knockout, not less.
+
 10. **Passage as unmodeled covariate.** Passages are matched across lines
     (IC1: 4–6; KO: 4–7), so passage functions like a batch variable.
     Baseline model is `~ condition`; test `~ passage + condition` as an
@@ -211,6 +217,16 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
     tool reasons alone. Note they used clusterProfiler v4.10.0 for the
     supplementary time-course analysis, so a closer comparison is possible
     there.
+
+12. **Reference DEG list is dominated by near-zero-baseline genes.**
+    Prediction registered before running 02, from two observations: seven of
+    the eight RT-qPCR-validated controls sit at 0.0–0.4 CPM in IC1 (§7), and
+    the top reported hit FKBPL has log2FC ≈ 22 (§5.7). Their 1,290-up /
+    174-down asymmetry is therefore likely driven by genes switching on from
+    zero rather than by symmetric regulation. Consequence: apeglm shrinks
+    exactly this class hardest, so recovery should be *lowest* in the
+    category that makes up most of their DEG list. Test by stratifying
+    recovery rate by baseMean in `03_concordance.R`.
 
 ---
 
@@ -234,13 +250,23 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
 ## 7. Sanity checks
 
 ### Primary positive control
-**HTT** (Entrez 3064, ENSG00000197386) should show strong downregulation in
-KO vs IC1. If HTT is not among the most significant downregulated genes,
-something is wrong with sample labeling or the count matrix — stop and
-investigate before anything else.
+**HTT** (Entrez 3064, ENSG00000197386) should show strong **UPregulation**
+in KO vs IC1. Table S3 reports **log2FC = +1.34**.
 
-Note: CRISPR knockouts often still produce transcript (frameshifted, subject
-to nonsense-mediated decay), so expect reduced rather than zero counts.
+This is counterintuitive for a knockout and was initially logged backwards.
+Two things explain it:
+
+- The KO is a frameshift edit, not a deletion. The locus still transcribes;
+  the message is nonfunctional. Protein is absent, transcript is not.
+- IC1's corrected allele is silenced (§5.9), so the *control* expresses HTT
+  monoallelically. The comparison is effectively two alleles vs one.
+
+Confirmed at the raw-count stage (01_load_data.R §6.6): mean CPM 57.5 in IC1
+vs 163.6 in KO, approximate log2 ratio **+1.49** against their +1.34. Close
+agreement on unnormalised CPM with n=2 vs n=4.
+
+If HTT is not clearly higher in KO, stop — sample labelling or the count
+matrix is wrong.
 
 ### Secondary controls
 Expected **upregulated** in KO (validated by the authors via RT-qPCR):
@@ -249,6 +275,14 @@ Expected **upregulated** in KO (validated by the authors via RT-qPCR):
 Expected **downregulated**: `PAX6` (paper reports log2FC = −2.38, KO vs IC1)
 
 If these don't appear with the right direction, check factor levels first.
+
+All 8 secondary controls confirmed at the CPM stage, correct direction:
+TWIST1 +2.58, SIX1 +3.64, TBX1 +0.72, TBX15 +4.24, MSX2 +3.73, MEOX2 +0.45,
+FOXD1 +3.66, PAX6 −1.69 (paper reports −2.38).
+
+All seven upregulated genes rise from near-zero baseline (0.0–0.4 CPM in IC1),
+so log2 ratios are inflated by the +1 pseudocount and should not be compared
+to DESeq2 output directly. See §5.12 for the consequence.
 
 ---
 
@@ -276,9 +310,16 @@ pydeseq2. No exceptions.
       28 snRNA, 20 other, 19 rRNA, 5 unknown, and only **178 protein-coding**
 - [x] Original pipeline identified: RSEM v1.3.1 / Ensembl v102 / DESeq2 v1.30.0
       (see §4)
+- [x] Library sizes: 45.1–58.2M assigned reads, max/min ratio 1.29 —
+      no sample excluded
+- [x] Detected genes (non-zero): 29,213–31,602 of 39,376 (~75–80%).
+      Detection saturates; depth and detection track together across groups
+      (GSM8343539 at 47.6M/30,874 vs GSM8343545 at 47.5M/30,911), so the
+      higher KO depth is sequencing, not biology
+- [x] Secondary controls confirmed at CPM stage: 8/8 correct direction (§7)
 
 ### Mapping
-- [ ] Coverage of count-matrix genes via GEO annotation: _____%
+- [x] Coverage of count-matrix genes via GEO annotation: **100%** (39,376/39,376)
 - [ ] Additional genes recovered via `org.Hs.eg.db`: _____
 - [ ] Duplicate resolution method: _____
 - [ ] Reference DEGs unmappable by construction: _____
@@ -286,7 +327,7 @@ pydeseq2. No exceptions.
 ### My analysis
 - [ ] Genes tested after pre-filtering: _____ (vs 31,264 in their table)
 - [ ] My DEG count at matched thresholds: _____ (____ up / ____ down)
-- [ ] HTT log2FC and padj: _____ (primary positive control)
+- [ ] HTT log2FC and padj: _____ (expect ~+1.34, Table S3; +1.49 at CPM stage)
 
 ### Concordance
 - [ ] Recovered (shared): _____
@@ -300,6 +341,8 @@ pydeseq2. No exceptions.
 - [ ] Of missed genes, fraction with padj between 0.05 and 0.15: _____
       (threshold sensitivity vs genuine disagreement)
 - [ ] Spearman correlation of log2FC across all shared genes: _____
+- [ ] Recovery rate stratified by baseMean quartile: _____
+      (tests the §5.12 prediction)
 
 ### Extensions
 - [ ] Did `~ passage + condition` change the result? _____
