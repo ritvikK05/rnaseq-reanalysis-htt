@@ -186,7 +186,12 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
 6. **Independent filtering disabled.** Same package (DESeq2), but they ran with
    `independentFiltering = FALSE` and `cooksCutoff = FALSE`. Genes assigned NA
    in this reanalysis were still tested in theirs — **unrecoverable by
-   construction**. Quantify in §9.
+   construction**. Quantify in §9. Note this cuts both ways. Independent 
+   filtering removes low-count genes from the multiple-testing burden before BH 
+   correction, so this reanalysis tests fewer hypotheses (29,590 vs their 31,264) 
+   and each surviving gene carries a lighter correction. That is a power *gain* 
+   offsetting the loss in §5.1 — and is the most likely reason this reanalysis 
+   calls 2,252 DEGs against their 1,464 despite having one fewer control replicate.
 
 7. **Shrinkage.** Using `lfcShrink(type="apeglm")`; their table contains
    unshrunken estimates. Evidence: top KO hit FKBPL has log2FC ≈ 22
@@ -244,6 +249,15 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
   matching their disabled setting. Rationale: defaults are the better practice,
   and the difference becomes a measurable discrepancy source (§5.6) rather than
   a hidden one. Optionally rerun with filtering off as a sensitivity check.
+- **Which log2FC is thresholded:** the |log2FC| > 1.5 cutoff is applied to
+  UNSHRUNKEN estimates for the matched-threshold DEG set, because Table S3
+  contains unshrunken values (§5.7). Thresholding apeglm-shrunken values
+  against their unshrunken ones would measure shrinkage rather than
+  concordance. Shrunken estimates are used for ranking, plots, and effect-size
+  reporting, and the shrunken DEG count is reported as a sensitivity analysis.
+  The gap between the two counts quantifies §5.7.
+- **Independent filtering target:** `results(alpha = 0.05)` to match the padj
+  cutoff. The 0.1 default optimises the filter for a threshold not being used.
 
 ---
 
@@ -317,6 +331,17 @@ pydeseq2. No exceptions.
       (GSM8343539 at 47.6M/30,874 vs GSM8343545 at 47.5M/30,911), so the
       higher KO depth is sequencing, not biology
 - [x] Secondary controls confirmed at CPM stage: 8/8 correct direction (§7)
+- [x] Dispersion fit inspected: standard shape — trend descends then flattens
+      to the biological floor; per-gene estimates scatter around the fitted
+      trend with final values shrunk hard onto it, as expected at n=2 controls
+- [x] PCA (VST, blind): PC1 85%, clean KO/IC1 separation — the knockout
+      dominates total variance. PC2 9%, and does NOT show a passage gradient:
+      KO_1/2/3 (p4–p6) cluster within ~1.5 units while KO_4 (p7) sits ~28
+      units away, so PC2 reflects one divergent sample rather than a trend.
+      The two IC1 replicates span nearly the full PC2 range (+14.7 to −14.2),
+      making them the most dissimilar pair in the dataset — the sole estimate
+      of within-control variability comes from an unusually spread pair,
+      a concrete mechanism for the conservatism predicted in §5.1.
 
 ### Mapping
 - [x] Coverage of count-matrix genes via GEO annotation: **100%** (39,376/39,376)
@@ -325,9 +350,20 @@ pydeseq2. No exceptions.
 - [ ] Reference DEGs unmappable by construction: _____
 
 ### My analysis
-- [ ] Genes tested after pre-filtering: _____ (vs 31,264 in their table)
-- [ ] My DEG count at matched thresholds: _____ (____ up / ____ down)
-- [ ] HTT log2FC and padj: _____ (expect ~+1.34, Table S3; +1.49 at CPM stage)
+- [x] Genes tested after pre-filtering: 29590 (vs 31,264 in their table)
+- [x] My DEG count at matched thresholds: 2252 (1483 up / 769 down)
+- [x] DEG count on shrunken estimates: 1901 (1331 up / 570 down)
+      — difference from the unshrunken count is the magnitude of §5.7
+- [x] Genes with padj = NA: 2326 (7.9% of tested)
+      — the §5.6 ceiling on recovery; their run had zero
+- [x] HTT log2FC and padj: +1.44 (expect ~+1.34, Table S3; +1.49 at CPM stage)
+- [x] PC1 variance explained: 85%  (VST, blind)
+- [x] Up/down asymmetry differs sharply: 1,483 up / 769 down (1.9:1) vs their
+      1,290 / 174 (7.4:1). Up counts agree within 15%; down count is 4.4x
+      theirs. Direction-specific, so not explained by a uniform power
+      difference. Candidates: §5.5 (rRNA depletion → size factors),
+      §5.2/§5.3 (annotation and quantifier). Test in 03 by stratifying the
+      excess downregulated genes by gene_type.
 
 ### Concordance
 - [ ] Recovered (shared): _____
@@ -343,6 +379,8 @@ pydeseq2. No exceptions.
 - [ ] Spearman correlation of log2FC across all shared genes: _____
 - [ ] Recovery rate stratified by baseMean quartile: _____
       (tests the §5.12 prediction)
+- [ ] Gene-type composition of "extra" DEGs, up vs down separately: _____
+      (tests whether the excess downregulated genes are ncRNA-driven)
 
 ### Extensions
 - [ ] Did `~ passage + condition` change the result? _____
