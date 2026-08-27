@@ -217,11 +217,37 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
     Baseline model is `~ condition`; test `~ passage + condition` as an
     extension.
 
+    PCA (§9) does not support an additive passage term. KO_1/2/3 (p4–p6)
+    cluster within ~1.5 units on PC2 while KO_4 (p7) sits ~28 units away,
+    and the two IC1 samples trend in the opposite direction. An additive
+    term assumes one shared passage effect across both lines, which the data
+    contradict; the interaction is unfittable at n=6. Run as an exploratory
+    sensitivity check using *continuous* passage (1 df, leaving 3 residual)
+    rather than a factor (3 df, leaving 1), and report it as exploratory
+    rather than as a corrected model.
+
 11. **Enrichment tool.** clusterProfiler v4.20.0 vs their PANTHER v17 (main
     text). Different gene universes and algorithms — GO results will differ for
     tool reasons alone. Note they used clusterProfiler v4.10.0 for the
     supplementary time-course analysis, so a closer comparison is possible
     there.
+
+13. **What actually explains the DEG excess (added after 03).** This
+    reanalysis calls more DEGs than the authors (2,252 unmapped / 1,784
+    mapped vs their 1,464) despite one fewer control replicate and an
+    unusually dissimilar control pair (§5.1, §9). Two registered predictions
+    for a direction-specific or expression-dependent cause were both tested
+    and both failed (§5.12, §9). The surviving explanation is §5.6 operating
+    in the direction opposite to how it was first framed: keeping
+    independent filtering ON removes low-count genes from the
+    multiple-testing burden before BH correction, so this analysis tests
+    29,590 hypotheses against their 31,264 and each surviving gene carries a
+    lighter correction. That effect is symmetric across direction and
+    independent of baseline expression — consistent with both null results
+    and with the near-balanced 424-down / 362-up split of the extra DEGs.
+    Testable directly by rerunning with `independentFiltering = FALSE`
+    (§9, Extensions): if this account is right, the DEG count should fall
+    toward theirs.
 
 12. **Reference DEG list is dominated by near-zero-baseline genes.**
     Prediction registered before running 02, from two observations: seven of
@@ -232,6 +258,17 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
     exactly this class hardest, so recovery should be *lowest* in the
     category that makes up most of their DEG list. Test by stratifying
     recovery rate by baseMean in `03_concordance.R`.
+
+    **Outcome: not supported.** Recovery by baseMean quartile is flat
+    (81.3 / 80.3 / 80.3 / 85.2, Q1 to Q4). Low-expression genes are
+    recovered as reliably as high-expression ones. Two caveats on what this
+    does and does not rule out. First, the stratification can only include
+    genes tested in *both* analyses, so the 244 unmappable reference DEGs —
+    where a low-expression effect would most plausibly live — are excluded
+    by construction. The prediction was not tested on the population it was
+    really about. Second, the companion test in §9 (gene-type composition of
+    the excess DEGs) also came back null, and the up/down asymmetry that
+    motivated this prediction largely dissolved after ID mapping. See §5.13.
 
 ---
 
@@ -345,9 +382,22 @@ pydeseq2. No exceptions.
 
 ### Mapping
 - [x] Coverage of count-matrix genes via GEO annotation: **100%** (39,376/39,376)
-- [ ] Additional genes recovered via `org.Hs.eg.db`: _____
-- [ ] Duplicate resolution method: _____
-- [ ] Reference DEGs unmappable by construction: _____
+- [x] Additional genes recovered via `org.Hs.eg.db`: 984 Entrez IDs that the
+      GEO annotation left unmapped. Total mapped: 22,879 of 29,590 tested
+      genes (77.3%) — the remaining 6,711 cannot participate in the
+      comparison regardless of their biology (§5.2 from this side, the
+      244 unmappable reference DEGs being the same problem from theirs).
+- [x] Duplicate resolution method: 118 Ensembl IDs received more than one
+      Entrez mapping; kept the entry with the lowest padj, tie-broken on
+      highest baseMean. 1:many mappings from `AnnotationDbi::select()` were
+      collapsed by keeping the first Ensembl ID per Entrez ID — arbitrary,
+      but these are genes the primary annotation could not map at all,
+      overwhelmingly ncRNA and pseudogenes (§9), so the choice has little
+      leverage on a protein-coding-dominated DEG list.
+- [x] Reference DEGs unmappable by construction: 244 of 1,464 (16.7%) —
+      never entered the tested gene universe here, so unrecoverable
+      regardless of statistical choices. This is the gap between the 68.2%
+      and 81.8% recovery rates.
 
 ### My analysis
 - [x] Genes tested after pre-filtering: 29590 (vs 31,264 in their table)
@@ -364,28 +414,59 @@ pydeseq2. No exceptions.
       difference. Candidates: §5.5 (rRNA depletion → size factors),
       §5.2/§5.3 (annotation and quantifier). Test in 03 by stratifying the
       excess downregulated genes by gene_type.
+      **Resolved in 03:** after ID mapping and duplicate collapse the extra
+      DEGs split 424 down / 362 up with near-identical gene-type composition
+      (34.2% vs 34.3% ncRNA+pseudogene). The asymmetry was largely an
+      artifact of the unmapped gene set, not a direction-specific mechanism.
+      See §5.13.
 
 ### Concordance
-- [ ] Recovered (shared): _____
-- [ ] Missed (theirs, not mine): _____
-- [ ] Extra (mine, not theirs): _____
-- [ ] Recovery rate: _____%
-- [ ] Of shared DEGs, fraction with matching log2FC sign: _____%
-      (should be ~100%; below ~95% suggests a labeling or reference-level problem)
-- [ ] Of missed genes, fraction assigned NA by DESeq2 filtering: _____
-      (see §5.6 — unrecoverable by construction)
-- [ ] Of missed genes, fraction with padj between 0.05 and 0.15: _____
-      (threshold sensitivity vs genuine disagreement)
-- [ ] Spearman correlation of log2FC across all shared genes: _____
-- [ ] Recovery rate stratified by baseMean quartile: _____
-      (tests the §5.12 prediction)
-- [ ] Gene-type composition of "extra" DEGs, up vs down separately: _____
-      (tests whether the excess downregulated genes are ncRNA-driven)
+- [x] Recovered (shared): 998
+- [x] Missed (theirs, not mine): 466
+- [x] Extra (mine, not theirs): 786
+- [x] Recovery rate: 68.2% of all 1,464 reference DEGs; 81.8% of the 1,220
+      that were mappable and tested here. The 13.6-point gap is §5.4/§5.2 —
+      genes never testable in this reanalysis, not statistical disagreement.
+- [x] My DEG count after mapping and duplicate collapse: 1,784 (from 2,252
+      unmapped) — 468 lost to unmappable IDs or duplicate resolution
+- [x] Of shared DEGs, fraction with matching log2FC sign: 100.0% (998/998)
+      — rules out reference-level or labelling error entirely
+- [x] Spearman correlation of log2FC across all shared genes: 0.617
+      (19,190 genes tested in both); 0.896 restricted to the 998 recovered
+      DEGs. The gap is expected: non-DE genes have little signal to agree
+      about, so two independent pipelines rank them differently. High
+      agreement where signal exists, moderate where it does not.
+- [x] Of missed genes, fraction assigned NA by DESeq2 filtering: 10 of 222
+      tested (4.5%). Much smaller than §5.6 anticipated — 2,326 genes have
+      padj = NA overall, but almost none are genes the authors called
+      significant. The filtering ceiling is real but nearly irrelevant here.
+- [x] Of missed genes, fraction with padj between 0.05 and 0.15: 72 of 222
+      (32.4%) — threshold sensitivity from n=2 controls (§5.1)
+- [x] Missed-gene decomposition: 466 total = 244 never tested here (52%,
+      structural — §5.2/§5.4) + 222 tested but not called. Of the 222:
+      10 NA, 72 near-miss, 32 significant but below the fold-change cutoff,
+      leaving ~108 genuine disagreements (~7% of the 1,464 reference set).
+- [x] Recovery rate stratified by baseMean quartile: 81.3 / 80.3 / 80.3 / 85.2
+      (Q1 lowest to Q4 highest). §5.12 predicted recovery would rise with
+      expression level; it does not. Recovery is essentially flat, with Q1
+      exceeding Q2 and Q3 and under five points separating the extremes.
+      The prediction is not supported.
+- [x] Gene-type composition of "extra" DEGs, up vs down: essentially identical
+      (ncRNA+pseudogene share 34.2% down vs 34.3% up). The 786 extras split
+      424 down / 362 up — close to balanced, so the raw up/down asymmetry
+      noted on Day 2 largely dissolves after mapping and duplicate collapse
+      (2,252 → 1,784 DEGs). No compositional signature; §5.5 and §5.2 are
+      not implicated by this test. Only snoRNA (14/0) and snRNA (9/0) are
+      one-sided, and at those counts that is suggestive at best.
 
 ### Extensions
-- [ ] Did `~ passage + condition` change the result? _____
 - [ ] Sensitivity check: rerun with `independentFiltering = FALSE` to match
-      their setting — how much does recovery improve? _____
+      their setting. Primary test of §5.13 — the DEG count should fall
+      toward 1,464 if the filtering account is correct. _____
+- [ ] Leave-one-out: drop KO_4 (the divergent sample on PC2, §9) and rerun.
+      How much does the DEG list move? _____
+- [ ] Exploratory: `~ passage + condition` with *continuous* passage
+      (see §5.10 for why continuous rather than factor). _____
 
 ---
 
@@ -399,12 +480,25 @@ rnaseq-reanalysis-htt/
 │   ├── 01_load_data.R           counts + metadata import, sanity checks
 │   ├── 02_deseq2.R              DE analysis
 │   ├── 03_concordance.R         comparison against Table S3
-│   └── 04_enrichment.R          clusterProfiler GO
-├── data/raw/                    gitignored — see Provenance in §3
+│   ├── 04_enrichment.R          clusterProfiler GO
+│   └── 05_sensitivity.R         filtering off, leave-one-out, passage
+├── data/
+│   ├── raw/                     gitignored — see Provenance in §3
+│   └── processed/               gitignored — regenerated by the scripts
 ├── notes/
+│   └── prep_python_to_r.R       coding conventions for all scripts
 └── results/
     ├── figures/
+    │   ├── 02_dispersion.png
+    │   ├── 02_ma_comparison.png
+    │   ├── 02_pca.png
+    │   ├── 03_lfc_scatter.png
+    │   └── 03_recovery_by_basemean.png
     └── tables/
+        ├── 02_results_full.csv
+        ├── 03_shared_genes.csv
+        ├── 03_missed_genes.csv
+        └── 03_extra_genes.csv
 ```
 
 Repo: https://github.com/ritvikK05/rnaseq-reanalysis-htt
