@@ -1,0 +1,5 @@
+"variant","n_deg","n_up","n_down","n_deg_mapped","n_recovered","recovery","n_na_padj"
+"baseline (filtering ON)",2252,1483,769,1784,998,68.2,2326
+"A: filtering OFF",2226,1472,754,1765,996,68,0
+"B: drop KO_4",2826,1424,1402,2166,917,62.6,2870
+"C: + continuous passage",2315,1437,878,1833,986,67.3,2869

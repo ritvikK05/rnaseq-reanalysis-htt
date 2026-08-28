@@ -232,23 +232,6 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
     supplementary time-course analysis, so a closer comparison is possible
     there.
 
-13. **What actually explains the DEG excess (added after 03).** This
-    reanalysis calls more DEGs than the authors (2,252 unmapped / 1,784
-    mapped vs their 1,464) despite one fewer control replicate and an
-    unusually dissimilar control pair (§5.1, §9). Two registered predictions
-    for a direction-specific or expression-dependent cause were both tested
-    and both failed (§5.12, §9). The surviving explanation is §5.6 operating
-    in the direction opposite to how it was first framed: keeping
-    independent filtering ON removes low-count genes from the
-    multiple-testing burden before BH correction, so this analysis tests
-    29,590 hypotheses against their 31,264 and each surviving gene carries a
-    lighter correction. That effect is symmetric across direction and
-    independent of baseline expression — consistent with both null results
-    and with the near-balanced 424-down / 362-up split of the extra DEGs.
-    Testable directly by rerunning with `independentFiltering = FALSE`
-    (§9, Extensions): if this account is right, the DEG count should fall
-    toward theirs.
-
 12. **Reference DEG list is dominated by near-zero-baseline genes.**
     Prediction registered before running 02, from two observations: seven of
     the eight RT-qPCR-validated controls sit at 0.0–0.4 CPM in IC1 (§7), and
@@ -269,6 +252,44 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
     really about. Second, the companion test in §9 (gene-type composition of
     the excess DEGs) also came back null, and the up/down asymmetry that
     motivated this prediction largely dissolved after ID mapping. See §5.13.
+
+13. **What explains the DEG excess (revised after 05).** This reanalysis
+    calls 2,252 DEGs against their 1,464. Three explanations were registered
+    and all three failed:
+
+    - baseline expression (§5.12 — recovery flat across baseMean quartiles)
+    - gene-class composition (§9 — 34.2% vs 34.3% ncRNA+pseudogene share)
+    - independent filtering (05A — disabling it moved the count from 2,252
+      to 2,226, closing 3.3% of the 788-gene gap)
+
+    The excess therefore has no explanation downstream of the count matrix,
+    and the sensitivity analysis in 05 makes that concrete: recovery is
+    68.2 / 68.0 / 62.6 / 67.3 across the four variants, so no analytical
+    choice available at the `results()` stage improves agreement with
+    Table S3, and the variant that moves the DEG count most makes recovery
+    *worse*.
+
+    What remains are the upstream differences: §5.2 (RefSeq vs Ensembl v102
+    gene models), §5.3 (NCBI's count-based pipeline vs RSEM's EM assignment
+    of multi-mapping reads), and §5.5 (rRNA depletion changing library
+    composition and therefore size factors). These produce genuinely
+    different counts for the same reads, and no `results()` parameter can
+    recover that. Testing it would require re-quantifying from FASTQ with
+    RSEM against Ensembl v102 — feasible but outside this project's scope,
+    and stated here as the natural next experiment rather than left implicit.
+
+    **A second candidate, untestable here.** 05B shows the DEG count moves
+    25% on the removal of one of six samples (§9, Extensions). A design this
+    sensitive to composition can produce a swing of the observed size from
+    sample membership alone, and this reanalysis differs from the authors'
+    by exactly one sample — the missing IC1_1 (§5.1). That explanation
+    requires no pipeline difference at all, and cannot be distinguished from
+    the quantification account without the excluded replicate.
+
+    **Confirmed en route:** disabling filtering and Cook's took padj NAs from
+    2,326 to exactly 0, matching Table S3. §5.6's inference about their
+    undocumented parameter choice — made from the absence of NAs alone — is
+    verified.
 
 ---
 
@@ -460,13 +481,62 @@ pydeseq2. No exceptions.
       one-sided, and at those counts that is suggestive at best.
 
 ### Extensions
-- [ ] Sensitivity check: rerun with `independentFiltering = FALSE` to match
-      their setting. Primary test of §5.13 — the DEG count should fall
-      toward 1,464 if the filtering account is correct. _____
-- [ ] Leave-one-out: drop KO_4 (the divergent sample on PC2, §9) and rerun.
-      How much does the DEG list move? _____
-- [ ] Exploratory: `~ passage + condition` with *continuous* passage
-      (see §5.10 for why continuous rather than factor). _____
+- [x] `independentFiltering = FALSE`, `cooksCutoff = FALSE` (05A): 2,226 DEGs
+      vs 2,252 baseline — a fall of 26, closing 3.3% of the 788-gene gap to
+      their 1,464. Recovery essentially unchanged (68.0% vs 68.2%).
+      **§5.13's filtering account is falsified**: the direction is right but
+      the magnitude is negligible. Registered as the primary test of §5.13
+      and reported as a failure.
+
+      Confirmed separately: padj NAs went from 2,326 to exactly 0, matching
+      Table S3's zero NAs. This verifies §5.6's inference about the authors'
+      undocumented parameter choice, which had been made from the absence of
+      NAs in their table alone.
+- [x] Leave-one-out dropping KO_4: 2,826 DEGs vs 2,252 baseline — removing a
+      sample INCREASED the count by 574. Jaccard overlap with the baseline
+      DEG list is 0.662, so roughly a third of the union differs. KO_4 is
+      the divergent sample on PC2 (§9); including it inflates within-KO
+      dispersion and makes every test conservative. Dropping it tightens the
+      KO group and hundreds of genes cross threshold.
+
+      **Implication:** the DEG count is not a stable quantity at this sample
+      size — it moves 25% on the removal of one of six samples, and the
+      68.2% recovery figure inherits that instability. This also bears on
+      §5.13: a design this sensitive to composition can produce a 788-gene
+      swing from sample membership alone, and this reanalysis differs from
+      the authors' by exactly one sample (the missing IC1_1, §5.1). Not
+      testable here, but a candidate explanation that does not require any
+      pipeline difference at all.
+- [x] Exploratory `~ passage_num + condition` (continuous passage, §5.10):
+      2,315 DEGs vs 2,252 baseline, Jaccard 0.858. Passage absorbs almost
+      nothing, confirming the PCA's finding that no passage gradient
+      structures the data. §5.10 is closed: passage is not a meaningful
+      unmodeled covariate in this design.
+- [x] **Direction-specific effect of KO_4.** Dropping it leaves the up count
+      nearly unchanged (1,483 → 1,424) but almost doubles the down count
+      (769 → 1,402) — all 574 additional DEGs are downregulated. KO_4
+      appears to inflate within-KO variance specifically for genes reduced
+      in the knockout. Note this runs opposite to the Day 2 puzzle: without
+      KO_4 the up/down ratio is 1.0:1, *further* from the authors' 7.4:1
+      than the baseline's 1.9:1. KO_4's presence moves this reanalysis
+      toward the published result, not away from it.
+
+- [x] **Recovery is insensitive to all three variants** (68.2 / 68.0 / 62.6 /
+      67.3). No analytical choice available downstream of the count matrix
+      improves agreement with Table S3, and the variant that changes the DEG
+      count most (05B, +25%) makes recovery *worse* by 5.6 points. Combined
+      with §5.13's failure, this locates the disagreement upstream — in
+      quantification and annotation, not in statistical parameters.
+
+- [x] **Sensitivity summary.** Across four variants the DEG count runs 2,226
+      (filtering off) / 2,252 (baseline) / 2,315 (passage) / 2,826 (drop
+      KO_4). Both deliberate analytical choices move the result by under 3%;
+      removing one of six samples moves it by 25%. At this sample size,
+      composition dominates methodology. The headline 68.2% recovery figure
+      inherits that instability and should be reported with the range, not
+      as a point estimate.
+
+      Full table: `results/tables/05_sensitivity_summary.csv`
 
 ---
 
@@ -493,12 +563,15 @@ rnaseq-reanalysis-htt/
     │   ├── 02_ma_comparison.png
     │   ├── 02_pca.png
     │   ├── 03_lfc_scatter.png
-    │   └── 03_recovery_by_basemean.png
+    │   ├── 03_recovery_by_basemean.png
+    │   ├── 05_deg_counts.png
+    │   └── 05_recovery.png
     └── tables/
         ├── 02_results_full.csv
         ├── 03_shared_genes.csv
         ├── 03_missed_genes.csv
-        └── 03_extra_genes.csv
+        ├── 03_extra_genes.csv
+        └── 05_sensitivity_summary.csv
 ```
 
 Repo: https://github.com/ritvikK05/rnaseq-reanalysis-htt
