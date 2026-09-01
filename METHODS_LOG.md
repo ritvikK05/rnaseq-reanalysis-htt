@@ -296,12 +296,14 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
     the quantification account without the excluded replicate.
 
     **04 supports the upstream account.** GO enrichment on the 786 extra
-    DEGs returns 3 marginal terms (best p.adj 0.0086) against 1e-27 for the
-    recovered set. The extras are not coherent biology, so they are unlikely
-    to be additional true signal picked up by greater sensitivity. The one
-    term that does appear — miRNA-mediated post-transcriptional gene
-    silencing — is non-coding RNA machinery, pointing at exactly the
-    annotation and quantification differences in §5.2 / §5.3 / §5.5.
+    DEGs returns 3 marginal terms (best p.adj 0.0086) against 256 terms for
+    the recovered set, and the two sets share **zero** GO terms
+    (Jaccard 0.000). The extras are not coherent biology and not the same
+    biology, so they are unlikely to be additional true signal picked up by
+    greater sensitivity. The one term that does appear — miRNA-mediated
+    post-transcriptional gene silencing — is non-coding RNA machinery,
+    pointing at exactly the annotation and quantification differences in
+    §5.2 / §5.3 / §5.5.
 
     **Confirmed en route:** disabling filtering and Cook's took padj NAs from
     2,326 to exactly 0, matching Table S3. §5.6's inference about their
@@ -520,6 +522,13 @@ pydeseq2. No exceptions.
       RNA machinery, consistent with the 34% ncRNA/pseudogene composition of
       the extras and with §5.2's account of where RefSeq and Ensembl v102
       diverge most.
+- [x] **GO term overlap between sets C and D is exactly zero.** Recovered:
+      256 terms after `simplify()`. Extra: 3. Shared: 0. Jaccard 0.000.
+      Not merely weaker enrichment — the extra DEGs share no biological
+      theme at all with the genes both analyses agree on. This is the
+      sharpest evidence that they are not additional true signal.
+      (Raw counts before `simplify()`: 1,150 recovered, 6 extra, 1,249 up,
+      2 down.)
 - [x] The up/down asymmetry in enrichment strength (2.4e-23 vs 0.018) is
       biological as well as statistical: the knockout gains a coordinated
       mesoderm program while losing a diffuse neural identity. ORA detects
