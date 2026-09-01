@@ -383,7 +383,8 @@ to DESeq2 output directly. See §5.12 for the consequence.
 - macOS (Apple Silicon), R 4.6.1, Bioconductor 3.23
 - DESeq2, apeglm, EnhancedVolcano, clusterProfiler 4.20.0, org.Hs.eg.db, tximport
 - Capture `sessionInfo()` output for the README
-- Lockfile: `renv::snapshot()` → commit `renv.lock`
+- Environment captured in `notes/sessionInfo.txt` (R 4.6.1, Bioconductor 3.23)
+- No `renv` lockfile; package versions recorded via sessionInfo instead
 
 **Fallback rule:** if still fighting R syntax at end of Day 2, switch to
 pydeseq2. No exceptions.

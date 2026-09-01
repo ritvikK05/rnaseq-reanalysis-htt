@@ -148,7 +148,7 @@ from that alone. I can't test it without the excluded replicate.
 
 ## Running this
 
-Needs R ≥ 4.4 with Bioconductor. Data files aren't tracked in the repo. See
+Built with R 4.6.1 and Bioconductor 3.23. Data files aren't tracked in the repo. See
 [`METHODS_LOG.md`](METHODS_LOG.md) §3 for provenance and exact filenames.
 
 ```r
