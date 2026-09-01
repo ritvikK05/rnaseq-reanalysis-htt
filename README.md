@@ -78,8 +78,8 @@ just on gene IDs.
 
 ## Why I called more DEGs than the paper
 
-I get 2,252 DEGs where the reference set has 1,464. I registered three
-explanations in advance and tested all three. None of them worked.
+I get 2,252 DEGs where the reference set has 1,464. I registered four
+explanations in advance and tested all four. None of them worked.
 
 | Hypothesis | Test | Result |
 |---|---|---|
@@ -87,11 +87,6 @@ explanations in advance and tested all three. None of them worked.
 | The extra genes are a distinct class | gene-type composition, up vs down | identical: 34.2% vs 34.3% ncRNA+pseudogene |
 | Independent filtering inflates my count | rerun with `independentFiltering = FALSE` | 2,252 → 2,226, closes 3.3% of the gap |
 | The extras are real signal I had power to find | GO enrichment on the extras alone | 3 marginal terms, zero shared with the 256 from the recovered set |
-
-I also ran GO enrichment on the 786 extra DEGs on their own. They give three
-marginal terms (best p.adj 0.0086) against 256 terms for the shared set, and the
-two sets have **no GO terms in common at all**. So they don't look like extra
-real signal that my analysis was sensitive enough to pick up.
 
 My conclusion is that the disagreement comes from upstream of the statistics.
 Nothing I can change at the `results()` stage improves agreement, and the
@@ -198,7 +193,7 @@ METHODS_LOG.md
 
 [`METHODS_LOG.md`](METHODS_LOG.md) is my working record: decisions, parameters,
 registered predictions and corrections, in the order they happened. It includes
-the things I got wrong, like the HTT direction and the three failed hypotheses,
+the things I got wrong, like the HTT direction and the four failed hypotheses,
 since that's what actually happened while doing the analysis.
 
 ---

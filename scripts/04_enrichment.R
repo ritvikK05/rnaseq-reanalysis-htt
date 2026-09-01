@@ -286,7 +286,7 @@ saveRDS(
 )
 
 cat("Saved:", file.path(dir_proc, "04_enrichment.rds"), "\n")
-cat("Next: figures for the writeup, then README.\n")
+cat("Next: scripts/05_sensitivity.R\n")
 
 
 # =============================================================================

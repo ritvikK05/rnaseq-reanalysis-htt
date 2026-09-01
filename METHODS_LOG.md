@@ -251,64 +251,65 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
     category that makes up most of their DEG list. Test by stratifying
     recovery rate by baseMean in `03_concordance.R`.
 
-    **Outcome: not supported.** Recovery by baseMean quartile is flat
-    (81.3 / 80.3 / 80.3 / 85.2, Q1 to Q4). Low-expression genes are
-    recovered as reliably as high-expression ones. Two caveats on what this
-    does and does not rule out. First, the stratification can only include
-    genes tested in *both* analyses, so the 244 unmappable reference DEGs —
-    where a low-expression effect would most plausibly live — are excluded
-    by construction. The prediction was not tested on the population it was
-    really about. Second, the companion test in §9 (gene-type composition of
-    the excess DEGs) also came back null, and the up/down asymmetry that
-    motivated this prediction largely dissolved after ID mapping. See §5.13.
+    **Outcome: not supported.** Recovery by baseMean quartile came back flat
+    (81.3 / 80.3 / 80.3 / 85.2, Q1 to Q4), so low-expression genes are
+    recovered about as reliably as high-expression ones.
 
-13. **What explains the DEG excess (revised after 05).** This reanalysis
-    calls 2,252 DEGs against their 1,464. Three explanations were registered
-    and all three failed:
+    Two things this doesn't rule out. The stratification only includes genes
+    tested in both analyses, so the 244 unmappable reference DEGs are left
+    out by construction, and those are where a low-expression effect would
+    most likely show up. So I didn't really test the prediction on the group
+    it was about. Also, the related test in §9 (gene-type composition of the
+    extra DEGs) came back null too, and the up/down asymmetry that made me
+    write this prediction mostly went away after ID mapping. See §5.13.
+
+13. **What explains the DEG excess (revised after 05).** I call 2,252 DEGs
+    against their 1,464. I registered four explanations and all four
+    failed:
 
     - baseline expression (§5.12 — recovery flat across baseMean quartiles)
     - gene-class composition (§9 — 34.2% vs 34.3% ncRNA+pseudogene share)
     - independent filtering (05A — disabling it moved the count from 2,252
       to 2,226, closing 3.3% of the 788-gene gap)
+    - the extras being real signal I had the power to find (04 — see below)
 
-    The excess therefore has no explanation downstream of the count matrix,
-    and the sensitivity analysis in 05 makes that concrete: recovery is
-    68.2 / 68.0 / 62.6 / 67.3 across the four variants, so no analytical
-    choice available at the `results()` stage improves agreement with
-    Table S3, and the variant that moves the DEG count most makes recovery
-    *worse*.
+    So the excess has no explanation downstream of the count matrix. The
+    sensitivity runs in 05 show this directly: recovery is 68.2 / 68.0 /
+    62.6 / 67.3 across the four variants, so nothing I can change at the
+    `results()` stage improves agreement with Table S3, and the variant that
+    moves the DEG count most actually makes recovery worse.
 
-    What remains are the upstream differences: §5.2 (RefSeq vs Ensembl v102
-    gene models), §5.3 (NCBI's count-based pipeline vs RSEM's EM assignment
-    of multi-mapping reads), and §5.5 (rRNA depletion changing library
-    composition and therefore size factors). These produce genuinely
-    different counts for the same reads, and no `results()` parameter can
-    recover that. Testing it would require re-quantifying from FASTQ with
-    RSEM against Ensembl v102 — feasible but outside this project's scope,
-    and stated here as the natural next experiment rather than left implicit.
+    That leaves the upstream differences: §5.2 (RefSeq vs Ensembl v102 gene
+    models), §5.3 (NCBI's count-based pipeline vs RSEM's EM assignment of
+    multi-mapping reads), and §5.5 (rRNA depletion changing library
+    composition and so the size factors). These give different counts from
+    the same reads, and no `results()` parameter can undo that. To confirm
+    it I would have to re-quantify from FASTQ with RSEM against Ensembl
+    v102, which was outside what I could do here. That's the next experiment
+    if I come back to this.
 
-    **A second candidate, untestable here.** 05B shows the DEG count moves
-    25% on the removal of one of six samples (§9, Extensions). A design this
-    sensitive to composition can produce a swing of the observed size from
-    sample membership alone, and this reanalysis differs from the authors'
-    by exactly one sample — the missing IC1_1 (§5.1). That explanation
-    requires no pipeline difference at all, and cannot be distinguished from
-    the quantification account without the excluded replicate.
+    **A second possibility I can't test.** 05B shows the DEG count moves 25%
+    when I drop one of six samples (§9, Extensions). A design that sensitive
+    to which samples are included could produce a gap this size from sample
+    membership alone, and my dataset differs from the authors' by exactly
+    one sample, the missing IC1_1 (§5.1). That wouldn't require any pipeline
+    difference at all. I can't separate it from the quantification
+    explanation without the excluded replicate.
 
-    **04 supports the upstream account.** GO enrichment on the 786 extra
-    DEGs returns 3 marginal terms (best p.adj 0.0086) against 256 terms for
-    the recovered set, and the two sets share **zero** GO terms
-    (Jaccard 0.000). The extras are not coherent biology and not the same
-    biology, so they are unlikely to be additional true signal picked up by
-    greater sensitivity. The one term that does appear — miRNA-mediated
-    post-transcriptional gene silencing — is non-coding RNA machinery,
-    pointing at exactly the annotation and quantification differences in
-    §5.2 / §5.3 / §5.5.
+    **04 supports the upstream explanation.** GO enrichment on the 786 extra
+    DEGs gives 3 marginal terms (best p.adj 0.0086) against 256 for the
+    recovered set, and the two sets share zero GO terms (Jaccard 0.000). So
+    the extras aren't coherent biology, and they aren't the same biology as
+    the shared set either, which makes it unlikely they're real signal I was
+    sensitive enough to catch. The one term that does come up,
+    miRNA-mediated post-transcriptional gene silencing, is non-coding RNA
+    machinery — which is where §5.2 / §5.3 / §5.5 would predict the
+    differences to land.
 
-    **Confirmed en route:** disabling filtering and Cook's took padj NAs from
-    2,326 to exactly 0, matching Table S3. §5.6's inference about their
-    undocumented parameter choice — made from the absence of NAs alone — is
-    verified.
+    **One thing did get confirmed.** Disabling filtering and Cook's took my
+    padj NAs from 2,326 to exactly 0, matching Table S3. I had inferred in
+    §5.6 that the authors disabled these settings purely from the fact that
+    their table has no NAs, and this confirms it.
 
 ---
 
@@ -422,11 +423,13 @@ pydeseq2. No exceptions.
 
 ### Mapping
 - [x] Coverage of count-matrix genes via GEO annotation: **100%** (39,376/39,376)
-- [x] Additional genes recovered via `org.Hs.eg.db`: 984 Entrez IDs that the
-      GEO annotation left unmapped. Total mapped: 22,879 of 29,590 tested
-      genes (77.3%) — the remaining 6,711 cannot participate in the
-      comparison regardless of their biology (§5.2 from this side, the
-      244 unmappable reference DEGs being the same problem from theirs).
+- [x] Additional genes recovered via `org.Hs.eg.db`: 984. Full sequence:
+      22,013 of 29,590 tested genes carried an Ensembl ID from the GEO
+      annotation (74.4%); org.Hs.eg.db recovered 984 more, giving 22,997
+      (77.7%); collapsing 118 duplicate Ensembl IDs leaves **22,879 unique
+      genes** entering the comparison. The remaining 6,593 cannot
+      participate regardless of their biology — §5.2 from this side, with
+      the 244 unmappable reference DEGs being the same problem from theirs.
 - [x] Duplicate resolution method: 118 Ensembl IDs received more than one
       Entrez mapping; kept the entry with the lowest padj, tie-broken on
       highest baseMean. 1:many mappings from `AnnotationDbi::select()` were
@@ -446,6 +449,11 @@ pydeseq2. No exceptions.
       — difference from the unshrunken count is the magnitude of §5.7
 - [x] Genes with padj = NA: 2326 (7.9% of tested)
       — the §5.6 ceiling on recovery; their run had zero
+- [x] DEG count on shrunken (apeglm) estimates: **1,901** (1,331 up /
+      570 down) vs 2,252 unshrunken. The 351-gene gap is the magnitude of
+      §5.7 — shrinkage alone removes 15.6% of the calls at matched
+      thresholds. Reported as a sensitivity figure; the unshrunken set is
+      used for concordance because Table S3 is unshrunken (§6).
 - [x] HTT log2FC and padj: +1.44 (expect ~+1.34, Table S3; +1.49 at CPM stage)
 - [x] PC1 variance explained: 85%  (VST, blind)
 - [x] Up/down asymmetry differs sharply: 1,483 up / 769 down (1.9:1) vs their
@@ -511,10 +519,10 @@ pydeseq2. No exceptions.
       undifferentiated state.
 - [x] Set D (998 recovered DEGs) reproduces the paper's biology: skeletal
       system development (p.adj 2.5e-27), extracellular matrix organization,
-      embryonic morphogenesis, ossification, pattern specification. This is
-      the neural crest / mesoderm program the authors report, recovered
-      independently — the concordance in 03 is agreement on biology, not
-      only on gene identifiers.
+      embryonic morphogenesis, ossification, pattern specification. That's
+      the neural crest / mesoderm program the authors describe, so the
+      concordance in 03 is agreement on the biology and not just on gene
+      IDs.
 - [x] Set C (786 extra DEGs) is essentially null: 3 terms, best p.adj 0.0086,
       against set D's 1e-27. The extras are neither more of the paper's
       biology nor a coherent alternative signal. Their top term is
@@ -523,17 +531,18 @@ pydeseq2. No exceptions.
       the extras and with §5.2's account of where RefSeq and Ensembl v102
       diverge most.
 - [x] **GO term overlap between sets C and D is exactly zero.** Recovered:
-      256 terms after `simplify()`. Extra: 3. Shared: 0. Jaccard 0.000.
-      Not merely weaker enrichment — the extra DEGs share no biological
-      theme at all with the genes both analyses agree on. This is the
-      sharpest evidence that they are not additional true signal.
+      256 terms after `simplify()`. Extra: 3. Shared: 0, Jaccard 0.000. So
+      it isn't just that the extras enrich more weakly — they share no
+      biological theme at all with the genes both analyses agree on. This is
+      the strongest evidence I have that they aren't real signal.
       (Raw counts before `simplify()`: 1,150 recovered, 6 extra, 1,249 up,
       2 down.)
-- [x] The up/down asymmetry in enrichment strength (2.4e-23 vs 0.018) is
-      biological as well as statistical: the knockout gains a coordinated
-      mesoderm program while losing a diffuse neural identity. ORA detects
-      coordinated programs far better than dispersed loss, which is part of
-      why the authors report a 7.4:1 up/down ratio.
+- [x] The gap in enrichment strength between up and down (2.4e-23 vs 0.018)
+      looks biological, not just statistical. The knockout gains a
+      coordinated mesoderm program but loses neural identity diffusely, and
+      ORA picks up coordinated programs much better than scattered loss.
+      That's probably part of why the authors report a 7.4:1 up/down
+      ratio.
 - [x] Enrichment parameters, for comparability against their PANTHER run
       (§5.11): GO Biological Process, hypergeometric test, BH correction,
       p.adjust < 0.05, `simplify(cutoff = 0.7)` to collapse redundant terms.
@@ -570,33 +579,34 @@ pydeseq2. No exceptions.
       testable here, but a candidate explanation that does not require any
       pipeline difference at all.
 
-- [x] **Direction-specific effect of KO_4.** Dropping it leaves the up count
-      nearly unchanged (1,483 → 1,424) but almost doubles the down count
-      (769 → 1,402) — all 574 additional DEGs are downregulated. KO_4
-      appears to inflate within-KO variance specifically for genes reduced
-      in the knockout. Note this runs opposite to the Day 2 puzzle: without
-      KO_4 the up/down ratio is 1.0:1, *further* from the authors' 7.4:1
-      than the baseline's 1.9:1. KO_4's presence moves this reanalysis
-      toward the published result, not away from it.
+- [x] **KO_4's effect is direction-specific.** Dropping it barely changes
+      the up count (1,483 → 1,424) but nearly doubles the down count
+      (769 → 1,402), so all 574 genes I gain are downregulated. It looks
+      like KO_4 inflates within-KO variance specifically for genes that go
+      down in the knockout. Worth noting this runs opposite to the Day 2
+      puzzle: without KO_4 my up/down ratio is 1.0:1, which is further from
+      the authors' 7.4:1 than my baseline 1.9:1. So keeping KO_4 in actually
+      moves me toward their result.
 - [x] Exploratory `~ passage_num + condition` (continuous passage, §5.10):
       2,315 DEGs vs 2,252 baseline, Jaccard 0.858. Passage absorbs almost
       nothing, confirming the PCA's finding that no passage gradient
       structures the data. §5.10 is closed: passage is not a meaningful
       unmodeled covariate in this design.
-- [x] **Recovery is insensitive to all three variants** (68.2 / 68.0 / 62.6 /
-      67.3). No analytical choice available downstream of the count matrix
+- [x] **Recovery barely moves across all three variants** (68.2 / 68.0 /
+      62.6 / 67.3). Nothing I can change downstream of the count matrix
       improves agreement with Table S3, and the variant that changes the DEG
-      count most (05B, +25%) makes recovery *worse* by 5.6 points. Combined
-      with §5.13's failure, this locates the disagreement upstream — in
-      quantification and annotation, not in statistical parameters.
+      count most (05B, +25%) makes recovery worse by 5.6 points. Together
+      with §5.13 failing, this puts the disagreement upstream, in
+      quantification and annotation rather than in my statistical
+      settings.
 
-- [x] **Sensitivity summary.** Across four variants the DEG count runs 2,226
-      (filtering off) / 2,252 (baseline) / 2,315 (passage) / 2,826 (drop
-      KO_4). Both deliberate analytical choices move the result by under 3%;
-      removing one of six samples moves it by 25%. At this sample size,
-      composition dominates methodology. The headline 68.2% recovery figure
-      inherits that instability and should be reported with the range, not
-      as a point estimate.
+- [x] **Sensitivity summary.** Across the four variants the DEG count runs
+      2,226 (filtering off) / 2,252 (baseline) / 2,315 (passage) / 2,826
+      (drop KO_4). The two analytical choices I made move it by under 3%,
+      but removing one of six samples moves it by 25%. At this sample size,
+      which samples are included matters more than how I analyze them. The
+      68.2% recovery figure carries that same instability, so I report the
+      range alongside it rather than treating it as a fixed number.
 
       Full table: `results/tables/05_sensitivity_summary.csv`
 
@@ -604,19 +614,24 @@ pydeseq2. No exceptions.
 
 ## 10. Repo layout
 
+Matches `git ls-files` as of Day 5. Data directories are gitignored.
+
 ```
 rnaseq-reanalysis-htt/
+├── .gitignore
 ├── METHODS_LOG.md
-├── README.md                    (Days 4–5)
+├── README.md
+├── rnaseq-reanalysis-htt.Rproj
 ├── scripts/
 │   ├── 01_load_data.R           counts + metadata import, sanity checks
 │   ├── 02_deseq2.R              DE analysis
 │   ├── 03_concordance.R         comparison against Table S3
 │   ├── 04_enrichment.R          clusterProfiler GO
-│   └── 05_sensitivity.R         filtering off, leave-one-out, passage
-├── data/
-│   ├── raw/                     gitignored — see Provenance in §3
-│   └── processed/               gitignored — regenerated by the scripts
+│   ├── 05_sensitivity.R         filtering off, leave-one-out, passage
+│   └── 06_figures.R             volcano + concordance panel
+├── data/                        gitignored
+│   ├── raw/                     see Provenance in §3
+│   └── processed/               regenerated by the scripts
 ├── notes/
 │   └── prep_python_to_r.R       coding conventions for all scripts
 └── results/
@@ -631,7 +646,9 @@ rnaseq-reanalysis-htt/
     │   ├── 04_go_recovered.png
     │   ├── 04_go_extra.png
     │   ├── 05_deg_counts.png
-    │   └── 05_recovery.png
+    │   ├── 05_recovery.png
+    │   ├── 06_volcano.png
+    │   └── 06_concordance_panel.png
     └── tables/
         ├── 02_results_full.csv
         ├── 03_shared_genes.csv
@@ -643,5 +660,9 @@ rnaseq-reanalysis-htt/
         ├── 04_go_extra.csv
         └── 05_sensitivity_summary.csv
 ```
+
+Note the script numbering runs 01-06 but 05 was written and run before 04:
+the sensitivity analysis tested §5.13, which the enrichment work then built
+on. Running them in numeric order reproduces everything regardless.
 
 Repo: https://github.com/ritvikK05/rnaseq-reanalysis-htt

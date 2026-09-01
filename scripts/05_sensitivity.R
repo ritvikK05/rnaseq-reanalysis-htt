@@ -279,7 +279,7 @@ saveRDS(
 )
 
 cat("Saved:", file.path(dir_proc, "05_sensitivity.rds"), "\n")
-cat("Next: scripts/04_enrichment.R\n")
+cat("Next: scripts/06_figures.R\n")
 
 
 # =============================================================================
