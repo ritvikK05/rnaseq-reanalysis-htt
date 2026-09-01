@@ -232,6 +232,15 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
     supplementary time-course analysis, so a closer comparison is possible
     there.
 
+    **Outcome (04).** The recovered DEG set reproduces the paper's biology
+    convincingly — skeletal system development at p.adj 2.5e-27, plus ECM
+    organization, embryonic morphogenesis, ossification and pattern
+    specification. Agreement therefore holds at the level of biology and not
+    only of gene identifiers, which is the check that matters. Term-by-term
+    comparison against their PANTHER output is not attempted: different
+    universe, different algorithm, and their published term list is
+    summarised rather than exhaustive.
+
 12. **Reference DEG list is dominated by near-zero-baseline genes.**
     Prediction registered before running 02, from two observations: seven of
     the eight RT-qPCR-validated controls sit at 0.0–0.4 CPM in IC1 (§7), and
@@ -285,6 +294,14 @@ The core of the writeup. Each is a candidate explanation for imperfect concordan
     by exactly one sample — the missing IC1_1 (§5.1). That explanation
     requires no pipeline difference at all, and cannot be distinguished from
     the quantification account without the excluded replicate.
+
+    **04 supports the upstream account.** GO enrichment on the 786 extra
+    DEGs returns 3 marginal terms (best p.adj 0.0086) against 1e-27 for the
+    recovered set. The extras are not coherent biology, so they are unlikely
+    to be additional true signal picked up by greater sensitivity. The one
+    term that does appear — miRNA-mediated post-transcriptional gene
+    silencing — is non-coding RNA machinery, pointing at exactly the
+    annotation and quantification differences in §5.2 / §5.3 / §5.5.
 
     **Confirmed en route:** disabling filtering and Cook's took padj NAs from
     2,326 to exactly 0, matching Table S3. §5.6's inference about their
@@ -479,6 +496,42 @@ pydeseq2. No exceptions.
       (2,252 → 1,784 DEGs). No compositional signature; §5.5 and §5.2 are
       not implicated by this test. Only snoRNA (14/0) and snRNA (9/0) are
       one-sided, and at those counts that is suggestive at best.
+      
+### Enrichment
+- [x] Set A (1,483 up): skeletal system development (p.adj 2.4e-23),
+      extracellular matrix organization, vasculature and heart development,
+      embryonic morphogenesis — the neural crest / mesoderm program the paper
+      reports, recovered independently.
+- [x] Set B (769 down): only 2 terms, but both on target — central nervous
+      system neuron differentiation and regulation of Notch signaling
+      (both p.adj 0.018). PAX6's reduction predicts loss of NSC identity, and
+      Notch is the canonical pathway maintaining progenitors in an
+      undifferentiated state.
+- [x] Set D (998 recovered DEGs) reproduces the paper's biology: skeletal
+      system development (p.adj 2.5e-27), extracellular matrix organization,
+      embryonic morphogenesis, ossification, pattern specification. This is
+      the neural crest / mesoderm program the authors report, recovered
+      independently — the concordance in 03 is agreement on biology, not
+      only on gene identifiers.
+- [x] Set C (786 extra DEGs) is essentially null: 3 terms, best p.adj 0.0086,
+      against set D's 1e-27. The extras are neither more of the paper's
+      biology nor a coherent alternative signal. Their top term is
+      miRNA-mediated post-transcriptional gene silencing (26/487) — non-coding
+      RNA machinery, consistent with the 34% ncRNA/pseudogene composition of
+      the extras and with §5.2's account of where RefSeq and Ensembl v102
+      diverge most.
+- [x] The up/down asymmetry in enrichment strength (2.4e-23 vs 0.018) is
+      biological as well as statistical: the knockout gains a coordinated
+      mesoderm program while losing a diffuse neural identity. ORA detects
+      coordinated programs far better than dispersed loss, which is part of
+      why the authors report a 7.4:1 up/down ratio.
+- [x] Enrichment parameters, for comparability against their PANTHER run
+      (§5.11): GO Biological Process, hypergeometric test, BH correction,
+      p.adjust < 0.05, `simplify(cutoff = 0.7)` to collapse redundant terms.
+      Universe = genes tested here with a non-NA padj, NOT all annotated
+      genes — using the full annotation would inflate every p-value, since
+      genes never testable here cannot be enriched. Their universe differs
+      again, so GO results diverge for this reason before any biology.
 
 ### Extensions
 - [x] `independentFiltering = FALSE`, `cooksCutoff = FALSE` (05A): 2,226 DEGs
@@ -507,11 +560,7 @@ pydeseq2. No exceptions.
       the authors' by exactly one sample (the missing IC1_1, §5.1). Not
       testable here, but a candidate explanation that does not require any
       pipeline difference at all.
-- [x] Exploratory `~ passage_num + condition` (continuous passage, §5.10):
-      2,315 DEGs vs 2,252 baseline, Jaccard 0.858. Passage absorbs almost
-      nothing, confirming the PCA's finding that no passage gradient
-      structures the data. §5.10 is closed: passage is not a meaningful
-      unmodeled covariate in this design.
+
 - [x] **Direction-specific effect of KO_4.** Dropping it leaves the up count
       nearly unchanged (1,483 → 1,424) but almost doubles the down count
       (769 → 1,402) — all 574 additional DEGs are downregulated. KO_4
@@ -520,7 +569,11 @@ pydeseq2. No exceptions.
       KO_4 the up/down ratio is 1.0:1, *further* from the authors' 7.4:1
       than the baseline's 1.9:1. KO_4's presence moves this reanalysis
       toward the published result, not away from it.
-
+- [x] Exploratory `~ passage_num + condition` (continuous passage, §5.10):
+      2,315 DEGs vs 2,252 baseline, Jaccard 0.858. Passage absorbs almost
+      nothing, confirming the PCA's finding that no passage gradient
+      structures the data. §5.10 is closed: passage is not a meaningful
+      unmodeled covariate in this design.
 - [x] **Recovery is insensitive to all three variants** (68.2 / 68.0 / 62.6 /
       67.3). No analytical choice available downstream of the count matrix
       improves agreement with Table S3, and the variant that changes the DEG
@@ -564,6 +617,10 @@ rnaseq-reanalysis-htt/
     │   ├── 02_pca.png
     │   ├── 03_lfc_scatter.png
     │   ├── 03_recovery_by_basemean.png
+    │   ├── 04_go_up.png
+    │   ├── 04_go_down.png
+    │   ├── 04_go_recovered.png
+    │   ├── 04_go_extra.png
     │   ├── 05_deg_counts.png
     │   └── 05_recovery.png
     └── tables/
@@ -571,6 +628,10 @@ rnaseq-reanalysis-htt/
         ├── 03_shared_genes.csv
         ├── 03_missed_genes.csv
         ├── 03_extra_genes.csv
+        ├── 04_go_up.csv
+        ├── 04_go_down.csv
+        ├── 04_go_recovered.csv
+        ├── 04_go_extra.csv
         └── 05_sensitivity_summary.csv
 ```
 
