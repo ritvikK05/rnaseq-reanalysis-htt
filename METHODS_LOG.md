@@ -1,7 +1,6 @@
 # RNA-seq Reanalysis — Methods Log
 
 Running record of decisions, parameters, and known discrepancy sources.
-Append as you go; this becomes the README on Days 4–5.
 
 ---
 
