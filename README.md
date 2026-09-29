@@ -27,7 +27,7 @@ the other 31.8% went.
 never tested at all, because they have no counterpart in my pipeline's gene
 universe. Of the 222 I did test, 72 were near misses (padj between 0.05 and
 0.15) and 32 were significant but fell below the fold-change cutoff. That leaves
-about 108 genes, roughly 7% of the reference list, where the two analyses
+about 118 genes, roughly 7% of the reference list, where the two analyses
 actually disagree.
 
 ---
